@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Team Voting - Hackathon Scoring{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-8">
+    <!-- Header -->
+    <div class="text-center">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">Team Voting</h1>
+        <p class="text-gray-600">Vote for the currently presenting team</p>
+    </div>
+
+    <!-- Voting Status -->
+    <div class="bg-white rounded-xl card-shadow p-6">
+        {% if not voting_enabled %}
+            <!-- Voting Disabled -->
+            <div class="text-center py-8">
+                <i class="fas fa-vote-yea text-6xl text-gray-300 mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-700 mb-2">Voting Currently Disabled</h2>
+                <p class="text-gray-500">Please wait for the judges to enable voting</p>
+            </div>
+        {% elif not current_team %}
+            <!-- No Team Presenting -->
+            <div class="text-center py-8">
+                <i class="fas fa-microphone-slash text-6xl text-gray-300 mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-700 mb-2">No Team Presenting</h2>
+                <p class="text-gray-500">Please wait for the judges to select a presenting team</p>
+            </div>
+        {% elif user_team_id == current_team.id %}
+            <!-- Can't Vote for Own Team -->
+            <div class="text-center py-8">
+                <i class="fas fa-ban text-6xl text-red-300 mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-700 mb-2">Cannot Vote for Your Own Team</h2>
+                <p class="text-gray-500">{{ current_team.name }} is currently presenting, but you cannot vote for your own team</p>
+            </div>
+        {% elif has_voted %}
+            <!-- Already Voted -->
+            <div class="text-center py-8">
+                <i class="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-700 mb-2">Vote Submitted!</h2>
+                <p class="text-gray-500">You have already voted for {{ current_team.name }}</p>
+                <p class="text-sm text-gray-400 mt-2">Thank you for participating</p>
+            </div>
+        {% else %}
+            <!-- Active Voting -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center space-x-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-full">
+                    <div class="pulse-dot w-3 h-3 bg-white rounded-full"></div>
+                    <span class="font-semibold">Now Presenting</span>
+                </div>
+            </div>
+
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">{{ current_team.name }}</h2>
+                <p class="text-xl text-gray-600 mb-1">{{ current_team.leader_name }}</p>
+                <p class="text-lg text-purple-600 font-semibold">{{ current_team.theme }}</p>
+            </div>
+
+            <!-- Rating Form -->
+            <form id="voting-form" class="space-y-6">
+                <div class="text-center">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Rate this team's presentation</h3>
+                    <p class="text-gray-600 mb-6">Click on the stars to give your rating (1-5)</p>
+                </div>
+
+                <!-- Star Rating -->
+                <div class="flex justify-center space-x-2 mb-8">
+                    <div class="star-rating" data-rating="0">
+                        {% for i in range(1, 6) %}
+                        <button type="button" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors" 
+                                data-value="{{ i }}" onclick="setRating({{ i }})">
+                            <i class="fas fa-star"></i>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Rating Labels -->
+                <div class="grid grid-cols-5 gap-2 text-center text-sm text-gray-600 mb-8">
+                    <div>⭐<br>Poor</div>
+                    <div>⭐⭐<br>Fair</div>
+                    <div>⭐⭐⭐<br>Good</div>
+                    <div>⭐⭐⭐⭐<br>Great</div>
+                    <div>⭐⭐⭐⭐⭐<br>Excellent</div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="text-center">
+                    <button type="submit" id="submit-btn" disabled
+                            class="btn-primary text-white px-8 py-3 rounded-lg font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-paper-plane mr-2"></i>Submit Vote
+                    </button>
+                </div>
+
+                <input type="hidden" id="rating-value" name="score" value="">
+            </form>
+        {% endif %}
+    </div>
+
+    <!-- Voting Instructions -->
+    {% if voting_enabled and current_team and user_team_id != current_team.id and not has_voted %}
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <h3 class="text-lg font-semibold text-blue-900 mb-3 flex items-center">
+            <i class="fas fa-info-circle mr-2"></i>Voting Instructions
+        </h3>
+        <ul class="space-y-2 text-blue-800">
+            <li class="flex items-start">
+                <i class="fas fa-check text-blue-600 mt-1 mr-2"></i>
+                Rate the team's presentation on a scale of 1-5 stars
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-blue-600 mt-1 mr-2"></i>
+                You can only vote once per team presentation
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-blue-600 mt-1 mr-2"></i>
+                Consider innovation, implementation, and presentation quality
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-blue-600 mt-1 mr-2"></i>
+                Your vote will be combined with judges' scores for final ranking
+            </li>
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+let currentRating = 0;
+
+function setRating(rating) {
+    currentRating = rating;
+    document.getElementById('rating-value').value = rating;
+    
+    // Update star display
+    const stars = document.querySelectorAll('.star');
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.classList.remove('text-gray-300');
+            star.classList.add('text-yellow-400');
+        } else {
+            star.classList.remove('text-yellow-400');
+            star.classList.add('text-gray-300');
+        }
+    });
+    
+    // Enable submit button
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('submit-btn').classList.remove('disabled:opacity-50', 'disabled:cursor-not-allowed');
+}
+
+document.getElementById('voting-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (currentRating === 0) {
+        showNotification('Please select a rating', 'error');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
+    
+    try {
+        await apiCall('/submit_vote', 'POST', { score: currentRating });
+        showNotification('Vote submitted successfully!', 'success');
+        setTimeout(() => location.reload(), 1500);
+    } catch (error) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Vote';
+    }
+});
+
+// Add hover effects to stars
+document.querySelectorAll('.star').forEach(star => {
+    star.addEventListener('mouseenter', function() {
+        const value = parseInt(this.dataset.value);
+        const stars = document.querySelectorAll('.star');
+        
+        stars.forEach((s, index) => {
+            if (index < value) {
+                s.classList.remove('text-gray-300');
+                s.classList.add('text-yellow-300');
+            } else {
+                s.classList.remove('text-yellow-300');
+                if (index >= currentRating) {
+                    s.classList.add('text-gray-300');
+                }
+            }
+        });
+    });
+});
+
+document.querySelector('.star-rating').addEventListener('mouseleave', function() {
+    // Reset to current rating
+    const stars = document.querySelectorAll('.star');
+    stars.forEach((star, index) => {
+        if (index < currentRating) {
+            star.classList.remove('text-gray-300', 'text-yellow-300');
+            star.classList.add('text-yellow-400');
+        } else {
+            star.classList.remove('text-yellow-400', 'text-yellow-300');
+            star.classList.add('text-gray-300');
+        }
+    });
+});
+</script>
+{% endblock %}

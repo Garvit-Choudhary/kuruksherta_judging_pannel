@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hackathon Scoring System{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        // Initialize Socket.IO with correct configuration
+        window.socketIO = io({
+            transports: ['websocket'],
+            upgrade: false,
+            autoConnect: true
+        });
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102,126,234,0.4);
+        }
+        .notification {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    {% if current_user.is_authenticated %}
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-trophy text-2xl"></i>
+                    <h1 class="text-xl font-bold">Hackathon Scorer</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="bg-white/20 px-3 py-1 rounded-full text-sm">
+                        {{ current_user.username }} ({{ current_user.role.title() }})
+                    </span>
+                    <a href="{{ url_for('logout') }}" class="hover:bg-white/20 px-3 py-1 rounded transition">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div id="flash-messages" class="fixed top-4 right-4 z-50 space-y-2">
+                {% for message in messages %}
+                    <div class="notification bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <span>{{ message }}</span>
+                        <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Real-time Status -->
+    {% if current_user.is_authenticated and current_user.role in ['team', 'judge'] %}
+    <div id="status-bar" class="bg-blue-600 text-white text-center py-2">
+        <div class="flex items-center justify-center space-x-2">
+            <div id="connection-status" class="pulse-dot w-2 h-2 bg-green-400 rounded-full"></div>
+            <span id="status-text">Connected</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Notification Toast -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
+
+    <script>
+        // Socket.IO connection
+        {% if current_user.is_authenticated %}
+        const socket = io();
+        
+        socket.on('connect', function(data) {
+            document.getElementById('connection-status').className = 'w-2 h-2 bg-green-400 rounded-full';
+            document.getElementById('status-text').textContent = 'Connected';
+        });
+
+        socket.on('disconnect', function() {
+            document.getElementById('connection-status').className = 'w-2 h-2 bg-red-400 rounded-full pulse-dot';
+            document.getElementById('status-text').textContent = 'Reconnecting...';
+        });
+
+        socket.on('presenting_team_changed', function(data) {
+            showNotification(`Now presenting: ${data.team_name || 'None'}`, 'info');
+            if (window.location.pathname === '/voting') {
+                location.reload();
+            }
+        });
+
+        socket.on('voting_status_changed', function(data) {
+            showNotification(`Voting ${data.enabled ? 'enabled' : 'disabled'}`, data.enabled ? 'success' : 'warning');
+            if (window.location.pathname === '/voting') {
+                location.reload();
+            }
+        });
+        {% endif %}
+
+        // Utility functions
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            const icons = {
+                success: 'fas fa-check-circle',
+                error: 'fas fa-exclamation-circle',
+                warning: 'fas fa-exclamation-triangle',
+                info: 'fas fa-info-circle'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `notification ${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center mb-2`;
+            toast.innerHTML = `
+                <i class="${icons[type]} mr-2"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+
+        // Auto-hide flash messages
+        setTimeout(() => {
+            const flashMessages = document.getElementById('flash-messages');
+            if (flashMessages) {
+                flashMessages.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => flashMessages.remove(), 300);
+            }
+        }, 5000);
+
+        // API helper
+        async function apiCall(url, method = 'GET', data = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content
+                }
+            };
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(url, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Request failed');
+                }
+                
+                return result;
+            } catch (error) {
+                showNotification(error.message, 'error');
+                throw error;
+            }
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

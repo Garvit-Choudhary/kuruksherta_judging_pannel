@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Hackathon Scoring{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="text-center">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+        <p class="text-gray-600">Manage teams, control voting, and view results</p>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl card-shadow p-6 text-center">
+            <i class="fas fa-users text-3xl text-blue-600 mb-3"></i>
+            <h3 class="text-2xl font-bold text-gray-900">{{ teams|length }}</h3>
+            <p class="text-gray-600">Teams</p>
+        </div>
+        <div class="bg-white rounded-xl card-shadow p-6 text-center">
+            <i class="fas fa-gavel text-3xl text-purple-600 mb-3"></i>
+            <h3 class="text-2xl font-bold text-gray-900">{{ judges|length }}</h3>
+            <p class="text-gray-600">Judges</p>
+        </div>
+        <div class="bg-white rounded-xl card-shadow p-6 text-center">
+            <i class="fas fa-microphone text-3xl text-green-600 mb-3"></i>
+            <h3 class="text-2xl font-bold text-gray-900">{{ current_team.name if current_team else 'None' }}</h3>
+            <p class="text-gray-600">Presenting</p>
+        </div>
+        <div class="bg-white rounded-xl card-shadow p-6 text-center">
+            <i class="fas fa-vote-yea text-3xl {{ 'text-green-600' if voting_enabled else 'text-red-600' }} mb-3"></i>
+            <h3 class="text-2xl font-bold text-gray-900">{{ 'Active' if voting_enabled else 'Disabled' }}</h3>
+            <p class="text-gray-600">Voting</p>
+        </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Team Upload -->
+        <div class="bg-white rounded-xl card-shadow p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-upload mr-3 text-blue-600"></i>Upload Teams
+            </h2>
+            
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input type="file" id="team-file" accept=".csv" class="hidden" onchange="uploadTeams()">
+                <div onclick="document.getElementById('team-file').click()" class="cursor-pointer">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-lg font-medium text-gray-700">Upload CSV File</p>
+                    <p class="text-sm text-gray-500 mt-2">Format: Team Name, Leader Name, Theme</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Voting Control -->
+        <div class="bg-white rounded-xl card-shadow p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-toggle-on mr-3 text-purple-600"></i>Voting Control
+            </h2>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <h3 class="font-semibold text-gray-900">Enable Voting</h3>
+                        <p class="text-sm text-gray-600">Allow teams to vote for presenting team</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="voting-toggle" {{ 'checked' if voting_enabled }} 
+                               onchange="toggleVoting()" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teams Management -->
+    {% if teams %}
+    <div class="bg-white rounded-xl card-shadow p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-list mr-3 text-green-600"></i>Teams Management
+            </h2>
+            <a href="{{ url_for('results') }}" class="btn-primary text-white px-4 py-2 rounded-lg hover:shadow-lg transition">
+                <i class="fas fa-chart-bar mr-2"></i>View Results
+            </a>
+        </div>
+
+        <!-- Theme Tabs -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="-mb-px flex space-x-8">
+                {% for theme in teams|map(attribute='theme')|unique %}
+                <button onclick="showTheme('{{ theme }}')" 
+                        class="theme-tab py-2 px-1 border-b-2 font-medium text-sm {{ 'border-indigo-500 text-indigo-600' if loop.first else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}"
+                        data-theme="{{ theme }}">
+                    {{ theme }}
+                    <span class="ml-2 bg-gray-100 text-gray-900 text-xs px-2 py-1 rounded-full">
+                        {{ teams|selectattr('theme', 'equalto', theme)|list|length }}
+                    </span>
+                </button>
+                {% endfor %}
+            </nav>
+        </div>
+
+        <!-- Teams List -->
+        {% for theme in teams|map(attribute='theme')|unique %}
+        <div id="theme-{{ theme }}" class="theme-content {{ 'hidden' if not loop.first }}">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for team in teams if team.theme == theme %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="font-semibold text-gray-900">{{ team.name }}</h3>
+                            <p class="text-sm text-gray-600">{{ team.leader_name }}</p>
+                        </div>
+                        {% if current_team and current_team.id == team.id %}
+                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                            Presenting
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="text-xs text-gray-500 mb-3">
+                        Team ID: {{ team.id }}
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="setCurrentTeam({{ team.id }})" 
+                                class="flex-1 bg-blue-600 text-white text-sm px-3 py-2 rounded hover:bg-blue-700 transition">
+                            <i class="fas fa-microphone mr-1"></i>Set Presenting
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl card-shadow p-12 text-center">
+        <i class="fas fa-users-slash text-6xl text-gray-300 mb-4"></i>
+        <h3 class="text-xl font-semibold text-gray-700 mb-2">No Teams Yet</h3>
+        <p class="text-gray-500">Upload a CSV file to add teams to the system</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+async function uploadTeams() {
+    const fileInput = document.getElementById('team-file');
+    const file = fileInput.files[0];
+    
+    if (!file) return;
+    if (!file.name.endsWith('.csv')) {
+        showNotification('Please upload a CSV file', 'error');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fetch('/upload_teams', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            const error = await response.text();
+            try {
+                const jsonError = JSON.parse(error);
+                showNotification(jsonError.error || 'Upload failed', 'error');
+            } catch {
+                showNotification('Upload failed: ' + error, 'error');
+            }
+            return;
+        }
+        
+        const result = await response.json();
+        showNotification(result.message, 'success');
+        setTimeout(() => location.reload(), 1500);
+    } catch (error) {
+        showNotification('Upload failed: ' + error.message, 'error');
+    } finally {
+        fileInput.value = '';  // Clear the file input
+    }
+}
+
+async function toggleVoting() {
+    const enabled = document.getElementById('voting-toggle').checked;
+    
+    try {
+        await apiCall('/toggle_voting', 'POST', { enabled });
+        showNotification(`Voting ${enabled ? 'enabled' : 'disabled'}`, 'success');
+    } catch (error) {
+        // Revert toggle on error
+        document.getElementById('voting-toggle').checked = !enabled;
+    }
+}
+
+async function setCurrentTeam(teamId) {
+    try {
+        await apiCall('/set_presenting_team', 'POST', { team_id: teamId });
+        showNotification('Presenting team updated', 'success');
+        setTimeout(() => location.reload(), 1000);
+    } catch (error) {
+        console.error('Error setting current team:', error);
+    }
+}
+
+function showTheme(theme) {
+    // Hide all theme contents
+    document.querySelectorAll('.theme-content').forEach(el => el.classList.add('hidden'));
+    // Show selected theme
+    document.getElementById('theme-' + theme).classList.remove('hidden');
+    
+    // Update tab styles
+    document.querySelectorAll('.theme-tab').forEach(tab => {
+        if (tab.dataset.theme === theme) {
+            tab.className = 'theme-tab py-2 px-1 border-b-2 border-indigo-500 text-indigo-600 font-medium text-sm';
+        } else {
+            tab.className = 'theme-tab py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm';
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Results - Hackathon Scoring{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="text-center">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">Competition Results</h1>
+        <p class="text-gray-600">Final rankings based on judge scores (70%) and audience votes (30%)</p>
+    </div>
+
+    <!-- Results by Theme -->
+    {% for theme, teams in results.items() %}
+    <div class="bg-white rounded-xl card-shadow p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-trophy mr-3 text-yellow-600"></i>{{ theme }}
+            </h2>
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-gray-600">
+                    {{ teams|length }} teams
+                </div>
+                <button class="btn btn-primary export-btn px-4 py-2 rounded-lg flex items-center gap-2" data-theme="{{ theme }}">
+                    <i class="fas fa-download"></i>
+                    Export Results
+                </button>
+            </div>
+        </div>
+
+        <!-- Podium for Top 3 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {% for team_data in teams[:3] %}
+            <div class="relative">
+                <!-- Podium Position -->
+                <div class="text-center mb-4">
+                    {% if loop.index == 1 %}
+                        <div class="w-16 h-16 mx-auto bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-2xl font-bold text-white mb-2">1</div>
+                        <div class="text-yellow-600 font-semibold">🥇 Champion</div>
+                    {% elif loop.index == 2 %}
+                        <div class="w-14 h-14 mx-auto bg-gradient-to-r from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-xl font-bold text-white mb-2">2</div>
+                        <div class="text-gray-600 font-semibold">🥈 Runner-up</div>
+                    {% else %}
+                        <div class="w-12 h-12 mx-auto bg-gradient-to-r from-orange-400 to-orange-600 rounded-full flex items-center justify-center text-lg font-bold text-white mb-2">3</div>
+                        <div class="text-orange-600 font-semibold">🥉 Third Place</div>
+                    {% endif %}
+                </div>
+
+                <!-- Team Card -->
+                <div class="bg-gray-50 rounded-lg p-4 {{ 'ring-2 ring-yellow-400 bg-yellow-50' if loop.index == 1 else 'ring-1 ring-gray-200' }}">
+                    <h3 class="font-bold text-gray-900 text-center mb-2">{{ team_data.team.name }}</h3>
+                    <p class="text-sm text-gray-600 text-center mb-3">{{ team_data.team.leader_name }}</p>
+                    
+                    <!-- Scores -->
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Final Score:</span>
+                            <span class="font-semibold">{{ team_data.final_score }}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Judge Score:</span>
+                            <span>{{ team_data.judge_percentage }}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Audience Score:</span>
+                            <span>{{ team_data.audience_percentage }}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Total Votes:</span>
+                            <span>{{ team_data.vote_count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Full Rankings Table -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
+                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Final Score</th>
+                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judge Score</th>
+                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Audience Score</th>
+                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Votes</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for team_data in teams %}
+                    <tr class="{{ 'bg-yellow-50' if loop.index == 1 }}">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ loop.index }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ team_data.team.name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ team_data.final_score }}%</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ team_data.judge_percentage }}%</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ team_data.audience_percentage }}%</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ team_data.vote_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle export buttons
+    document.querySelectorAll('.export-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const theme = this.dataset.theme;
+            
+            // Show loading state
+            this.disabled = true;
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span class="ml-2">Exporting...</span>';
+            
+            fetch(`/export_theme_results/${encodeURIComponent(theme)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Create blob and download
+                        const blob = new Blob([data.content], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = data.filename;
+                        
+                        document.body.appendChild(a);
+                        a.click();
+                        
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to export results'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Export error:', error);
+                    alert('Failed to export results. Please try again.');
+                })
+                .finally(() => {
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                });
+        });
+    });
+});
+</script>
+{% endblock %}
