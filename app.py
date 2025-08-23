@@ -10,6 +10,7 @@ import os
 from datetime import datetime, UTC
 from sqlalchemy import func, case, and_
 
+app.run(allow_unsafe_werkzeug=True)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'f1fbd53703a549d300693c135f4cfad1'  
