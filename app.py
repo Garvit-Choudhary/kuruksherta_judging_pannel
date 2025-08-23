@@ -12,7 +12,7 @@ from sqlalchemy import func, case, and_
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'  
+app.config['SECRET_KEY'] = 'f1fbd53703a549d300693c135f4cfad1'  
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///hackathon.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -62,10 +62,12 @@ class Team(db.Model):
     description = db.Column(db.Text)
     members = db.Column(db.Text)  # Comma-separated list of member names
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    judge_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Link to assigned judge
     
     # Relationships
     scores = db.relationship('JudgeScore', backref='team', lazy=True)
     votes = db.relationship('Vote', backref='team', lazy=True)
+    judge = db.relationship('User', foreign_keys=[judge_id], backref='assigned_teams')
 
 class JudgeScore(db.Model):
     __tablename__ = 'judge_scores'
@@ -330,10 +332,10 @@ def upload_teams():
         return jsonify({'error': f'Invalid CSV format: {str(e)}'}), 400
         
     # Validate required columns
-    required_fields = ['Team Name', 'Leader Name', 'Theme']
+    required_fields = ['Team Name', 'Leader Name', 'Theme', 'Assigned Judge']
     if not all(field in csv_reader.fieldnames for field in required_fields):
         return jsonify({
-            'error': 'CSV must contain "Team Name", "Leader Name", and "Theme" columns'
+            'error': 'CSV must contain "Team Name", "Leader Name", "Theme", and "Assigned Judge" columns'
         }), 400
     
     # Define valid themes
@@ -343,23 +345,34 @@ def upload_teams():
     try:
         # Process rows in transaction
         for row in rows:
+            # Skip comment rows (starting with #)
+            if row['Team Name'].startswith('#'):
+                continue
+                
             team_name = row['Team Name'].strip()
             leader_name = row['Leader Name'].strip()
             theme = row['Theme'].strip()
+            assigned_judge = row['Assigned Judge'].strip()
             
-            if not team_name or not leader_name or not theme:
+            if not team_name or not leader_name or not theme or not assigned_judge:
                 raise ValueError(f'Empty required field in row: {row}')
                 
             if theme not in valid_themes:
                 raise ValueError(f'Invalid theme "{theme}". Must be one of: {", ".join(valid_themes)}')
                 
+            # Find the specified judge
+            judge = User.query.filter_by(username=assigned_judge, role='judge').first()
+            if not judge:
+                raise ValueError(f'Judge not found with username: {assigned_judge}')
+
             # Create team
             team = Team(
                 name=team_name,
                 leader_name=leader_name,
                 theme=theme,
-                members=row.get('Members', '').strip(),
-                description=row.get('Description', '').strip()
+                members=row.get('Members', '') or '',  # Handle None case
+                description=row.get('Description', '') or '',  # Handle None case
+                judge_id=judge.id
             )
             
             # Create leader account
@@ -573,16 +586,17 @@ def judge_dashboard():
         flash('Access denied')
         return redirect(url_for('index'))
     
-    if not current_user.assigned_theme:
-        flash('No theme assigned. Please contact an administrator.')
+    # Get only teams assigned to this specific judge
+    teams = Team.query.filter_by(judge_id=current_user.id).all()
+    
+    if not teams:
+        flash('No teams assigned to you. Please contact an administrator.')
         return redirect(url_for('index'))
         
-    # Only get teams from the judge's assigned theme
-    teams = Team.query.filter_by(theme=current_user.assigned_theme).all()
     current_team = get_current_team()
     
-    # Only show current team if it's in judge's theme
-    if current_team and current_team.theme != current_user.assigned_theme:
+    # Only show current team if it's assigned to this judge
+    if current_team and current_team.judge_id != current_user.id:
         current_team = None
     
     # Get judge's scores
@@ -664,11 +678,17 @@ def set_current_team_route():
         'team_id': team_id,
         'team_name': current_team.name if current_team else None,
         'presentation_time': presentation_time,
-        'action': action
+        'action': action,
+        'judge_id': current_user.id if current_user.role == 'judge' else None
     }
     
     try:
-        socketio.emit('presenting_team_changed', response_data)
+        # For judges, emit to judge-specific channel
+        if current_user.role == 'judge':
+            socketio.emit(f'presentation_update_judge_{current_user.id}', response_data)
+        else:
+            # Admin events still go to all
+            socketio.emit('presenting_team_changed', response_data)
     except Exception as e:
         print(f"Error emitting team change: {e}")
     
@@ -695,17 +715,19 @@ def team_voting():
     current_team = get_current_team()
     voting_enabled = get_voting_enabled()
     
-    # Get user's team theme
-    user_theme = None
+    # Get user's team and assigned judge
+    user_team = None
+    user_judge_id = None
     if current_user.team_id:
         user_team = Team.query.get(current_user.team_id)
         if user_team:
-            user_theme = user_team.theme
+            user_judge_id = user_team.judge_id
     
-    # Check if user can vote (same theme as current team)
+    # Check if user can vote (assigned to same judge as current team)
     can_vote = True
-    if current_team and user_theme:
-        can_vote = current_team.theme == user_theme
+    if current_team and current_user.role == 'team_leader':
+        # Only teams assigned to the same judge can vote
+        can_vote = user_team and user_team.judge_id == current_team.judge_id
     
     has_voted = False
     if current_team:
@@ -719,7 +741,8 @@ def team_voting():
                          voting_enabled=voting_enabled and can_vote,
                          has_voted=has_voted,
                          user_team_id=current_user.team_id,
-                         can_vote=can_vote)
+                         can_vote=can_vote,
+                         judge_id=user_judge_id)
 
 @app.route('/submit_vote', methods=['POST'])
 @login_required
@@ -781,24 +804,42 @@ def init_db():
         if not User.query.filter_by(username='admin').first():
             # Create admin user
             admin = User(username='admin', role='admin')
-            admin.set_password('admin123')
+            admin.set_password('jgWxWE)$9V@7Ms4M')
             db.session.add(admin)
             
-            # Create three judges with specific themes
+            # Create multiple judges with specific themes
             judges = [
+                # AIML Theme Judges
                 {
-                    'username': 'aiml_judge',
+                    'username': 'aiml_judge1',
                     'password': 'aiml123',
                     'theme': 'AIML (Theme_1)'
                 },
                 {
-                    'username': 'cyber_judge',
+                    'username': 'aiml_judge2',
+                    'password': 'aiml456',
+                    'theme': 'AIML (Theme_1)'
+                },
+                # Cyber Security Theme Judges
+                {
+                    'username': 'cyber_judge1',
                     'password': 'cyber123',
                     'theme': 'Cyber security and block chain (Theme_2)'
                 },
                 {
-                    'username': 'innovation_judge',
+                    'username': 'cyber_judge2',
+                    'password': 'cyber456',
+                    'theme': 'Cyber security and block chain (Theme_2)'
+                },
+                # Open Innovation Theme Judges
+                {
+                    'username': 'innovation_judge1',
                     'password': 'innovation123',
+                    'theme': 'Open Innovation'
+                },
+                {
+                    'username': 'innovation_judge2',
+                    'password': 'innovation456',
                     'theme': 'Open Innovation'
                 }
             ]

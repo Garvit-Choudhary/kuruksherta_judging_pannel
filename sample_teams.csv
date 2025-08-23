@@ -1,7 +1,27 @@
-Team Name,Leader Name,Theme
-Team Alpha,John Smith,AIML (Theme_1)
-Team Beta,Jane Doe,AIML (Theme_1)
-Team Gamma,Bob Johnson,Cyber security and block chain (Theme_2)
-Team Delta,Alice Brown,Open Innovation
-Team Echo,Charlie Wilson,Open Innovation
-Team Fox,Diana Davis,Open Innovation
+Team Name,Leader Name,Theme,Assigned Judge,Members,Description
+# AIML Theme - Judge 1 Group
+AI Innovators,John Smith,AIML (Theme_1),aiml_judge1,"Sarah Chen, Mike Johnson, David Kim","Advanced chatbot with multilingual support"
+ML Masters,Jane Doe,AIML (Theme_1),aiml_judge1,"Tom Wilson, Emma Davis","Computer vision for accessibility"
+Neural Ninjas,Robert Lee,AIML (Theme_1),aiml_judge1,"Alice Wong, Peter Park","Reinforcement learning for robotics"
+# AIML Theme - Judge 2 Group
+DataMinds,Maria Garcia,AIML (Theme_1),aiml_judge2,"James Liu, Sofia Rodriguez","Healthcare predictive analytics"
+AI Health,Sarah Lee,AIML (Theme_1),aiml_judge2,"Mike Chen, Lisa Park","Medical image analysis"
+SmartAI,David Kim,AIML (Theme_1),aiml_judge2,"Anna Wu, Tom Brown","Smart home automation system"
+
+# Cyber Security Theme - Judge 1 Group
+CryptoGuard,Bob Johnson,Cyber security and block chain (Theme_2),cyber_judge1,"Alex Turner, Emma White","Secure voting system"
+SecureChain,Lisa Chen,Cyber security and block chain (Theme_2),cyber_judge1,"Mark Brown, Diana Lee","Zero-knowledge proof system"
+CyberShield,Hassan Ahmed,Cyber security and block chain (Theme_2),cyber_judge1,"Priya Patel, John Murphy","Intrusion detection system"
+# Cyber Security Theme - Judge 2 Group
+BlockMasters,Rachel Kim,Cyber security and block chain (Theme_2),cyber_judge2,"Chris Wong, Sarah Miller","Smart contract analyzer"
+CryptoSafe,Michael Wu,Cyber security and block chain (Theme_2),cyber_judge2,"Elena Santos, Ryan Lee","Cryptocurrency security tool"
+SecureNet,James Taylor,Cyber security and block chain (Theme_2),cyber_judge2,"Nina Patel, Kevin Chen","Network security platform"
+
+# Open Innovation Theme - Judge 1 Group
+EcoTech,Alice Brown,Open Innovation,innovation_judge1,"Tom Harris, Jerry Wilson","Sustainable energy platform"
+SmartCity,Charlie Wilson,Open Innovation,innovation_judge1,"Eva Martinez, Ryan Cooper","Urban mobility system"
+GreenFuture,Linda Park,Open Innovation,innovation_judge1,"Alex Kim, Maria Garcia","Renewable energy tracker"
+# Open Innovation Theme - Judge 2 Group
+HealthHub,Diana Davis,Open Innovation,innovation_judge2,"Michael Chang, Laura Taylor","Telemedicine platform"
+GreenSolutions,Sam Park,Open Innovation,innovation_judge2,"Jessica Lee, David Chen","Smart waste management"
+EduTech,Emily Wong,Open Innovation,innovation_judge2,"Robert Chen, Sofia Lee","AR learning platform"

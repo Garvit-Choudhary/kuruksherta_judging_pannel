@@ -120,12 +120,23 @@
             document.getElementById('status-text').textContent = 'Reconnecting...';
         });
 
-        socket.on('presenting_team_changed', function(data) {
+        {% if judge_id %}
+        // Subscribe to judge-specific events
+        socket.on(`presentation_update_judge_{{ judge_id }}`, function(data) {
             showNotification(`Now presenting: ${data.team_name || 'None'}`, 'info');
-            if (window.location.pathname === '/voting') {
+            if (window.location.pathname === '/team_voting') {
                 location.reload();
             }
         });
+        {% else %}
+        // Admin/Judge view - listen for global events
+        socket.on('presenting_team_changed', function(data) {
+            showNotification(`Now presenting: ${data.team_name || 'None'}`, 'info');
+            if (window.location.pathname === '/team_voting') {
+                location.reload();
+            }
+        });
+        {% endif %}
 
         socket.on('voting_status_changed', function(data) {
             showNotification(`Voting ${data.enabled ? 'enabled' : 'disabled'}`, data.enabled ? 'success' : 'warning');
