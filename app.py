@@ -29,7 +29,7 @@ login_manager.login_message = 'Please log in to access this page.'
 socketio = SocketIO(
     app,
     cors_allowed_origins="*",
-    async_mode='threading',
+    async_mode="gevent",
     logger=True,
     engineio_logger=True,
     ping_timeout=60,
