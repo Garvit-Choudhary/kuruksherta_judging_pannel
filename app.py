@@ -810,35 +810,81 @@ def init_db():
             judges = [
                 # AIML Theme Judges
                 {
-                    'username': 'aiml_judge1',
-                    'password': 'aiml123',
+                    'username': 'aiml_santosh',
+                    'password': 'jevven18182',
                     'theme': 'AIML (Theme_1)'
                 },
                 {
-                    'username': 'aiml_judge2',
-                    'password': 'aiml456',
+                    'username': 'aiml_shraddha',
+                    'password': 'kirti64827',
+                    'theme': 'AIML (Theme_1)'
+                },
+                {
+                    'username': 'aiml_shalmali',
+                    'password': 'shivaji93542',
+                    'theme': 'AIML (Theme_1)'
+                },
+                {
+                    'username': 'aiml_kavita',
+                    'password': 'trupti27106',
+                    'theme': 'AIML (Theme_1)'
+                },
+                {
+                    'username': 'aiml_sangita',
+                    'password': 'dipali58493',
+                    'theme': 'AIML (Theme_1)'
+                },
+                {
+                    'username': 'aiml_anupama',
+                    'password': 'rohini71950',
+                    'theme': 'AIML (Theme_1)'
+                },
+                {
+                    'username': 'aiml_manisha',
+                    'password': 'ashwini36287',
+                    'theme': 'AIML (Theme_1)'
+                },
+                {
+                    'username': 'aiml_shital',
+                    'password': 'amol84016',
                     'theme': 'AIML (Theme_1)'
                 },
                 # Cyber Security Theme Judges
                 {
-                    'username': 'cyber_judge1',
-                    'password': 'cyber123',
+                    'username': 'cyber_jai',
+                    'password': 'rushikesh15792',
                     'theme': 'Cyber security and block chain (Theme_2)'
                 },
                 {
-                    'username': 'cyber_judge2',
-                    'password': 'cyber456',
+                    'username': 'cyber_sammed',
+                    'password': 'mayuri69304',
                     'theme': 'Cyber security and block chain (Theme_2)'
                 },
+                
                 # Open Innovation Theme Judges
                 {
-                    'username': 'innovation_judge1',
-                    'password': 'innovation123',
+                    'username': 'innovation_amit',
+                    'password': 'vandana42851',
                     'theme': 'Open Innovation'
                 },
                 {
-                    'username': 'innovation_judge2',
-                    'password': 'innovation456',
+                    'username': 'innovation_vaishali',
+                    'password': 'anuradha97638',
+                    'theme': 'Open Innovation'
+                },
+                {
+                    'username': 'innovation_bhalchandra',
+                    'password': 'supriya50327',
+                    'theme': 'Open Innovation'
+                },
+                {
+                    'username': 'innovation_sunil',
+                    'password': 'omkar84219',
+                    'theme': 'Open Innovation'
+                },
+                {
+                    'username': 'innovation_priti',
+                    'password': 'vaibhav31670',
                     'theme': 'Open Innovation'
                 }
             ]
