@@ -47,7 +47,9 @@
                 <div onclick="document.getElementById('team-file').click()" class="cursor-pointer">
                     <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
                     <p class="text-lg font-medium text-gray-700">Upload CSV File</p>
-                    <p class="text-sm text-gray-500 mt-2">Format: Team Name, Leader Name, Theme</p>
+                    <p class="text-sm text-gray-500 mt-2">
+                        Format: <strong>Team Name, Leader Name, Theme, Assigned Judge</strong>
+                    </p>
                 </div>
             </div>
         </div>
@@ -90,9 +92,18 @@
         <div class="border-b border-gray-200 mb-6">
             <nav class="-mb-px flex space-x-8">
                 {% for theme in teams|map(attribute='theme')|unique %}
-                <button onclick="showTheme('{{ theme }}')" 
+                {% set safe_theme = theme|lower
+                                     |replace(' ', '_')
+                                     |replace('(', '')
+                                     |replace(')', '')
+                                     |replace('&', 'and')
+                                     |replace('/', '_')
+                                     |replace(',', '')
+                                     |replace("'", '')
+                               %}
+                <button onclick="showTheme('{{ safe_theme }}')" 
                         class="theme-tab py-2 px-1 border-b-2 font-medium text-sm {{ 'border-indigo-500 text-indigo-600' if loop.first else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}"
-                        data-theme="{{ theme }}">
+                        data-theme="{{ safe_theme }}">
                     {{ theme }}
                     <span class="ml-2 bg-gray-100 text-gray-900 text-xs px-2 py-1 rounded-full">
                         {{ teams|selectattr('theme', 'equalto', theme)|list|length }}
@@ -104,7 +115,16 @@
 
         <!-- Teams List -->
         {% for theme in teams|map(attribute='theme')|unique %}
-        <div id="theme-{{ theme }}" class="theme-content {{ 'hidden' if not loop.first }}">
+        {% set safe_theme = theme|lower
+                             |replace(' ', '_')
+                             |replace('(', '')
+                             |replace(')', '')
+                             |replace('&', 'and')
+                             |replace('/', '_')
+                             |replace(',', '')
+                             |replace("'", '')
+                       %}
+        <div id="theme-{{ safe_theme }}" class="theme-content {{ 'hidden' if not loop.first }}">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {% for team in teams if team.theme == theme %}
                 <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
@@ -182,7 +202,7 @@ async function uploadTeams() {
         
         const result = await response.json();
         showNotification(result.message, 'success');
-        setTimeout(() => location.reload(), 1500);
+        setTimeout(() => location.reload(), 1200);
     } catch (error) {
         showNotification('Upload failed: ' + error.message, 'error');
     } finally {
@@ -199,24 +219,33 @@ async function toggleVoting() {
     } catch (error) {
         // Revert toggle on error
         document.getElementById('voting-toggle').checked = !enabled;
+        showNotification(error?.message || 'Failed to toggle voting', 'error');
     }
 }
 
 async function setCurrentTeam(teamId) {
     try {
-        await apiCall('/set_presenting_team', 'POST', { team_id: teamId });
+        // Your Flask route is '/set_current_team' (not '/set_presenting_team')
+        await apiCall('/set_current_team', 'POST', { team_id: teamId, action: 'select' });
         showNotification('Presenting team updated', 'success');
-        setTimeout(() => location.reload(), 1000);
+        setTimeout(() => location.reload(), 800);
     } catch (error) {
         console.error('Error setting current team:', error);
+        showNotification(error?.message || 'Failed to set presenting team', 'error');
     }
 }
 
 function showTheme(theme) {
     // Hide all theme contents
     document.querySelectorAll('.theme-content').forEach(el => el.classList.add('hidden'));
-    // Show selected theme
-    document.getElementById('theme-' + theme).classList.remove('hidden');
+
+    // Show selected theme (guard if missing)
+    const el = document.getElementById('theme-' + theme);
+    if (!el) {
+        console.warn('Theme element not found:', theme);
+        return;
+    }
+    el.classList.remove('hidden');
     
     // Update tab styles
     document.querySelectorAll('.theme-tab').forEach(tab => {
@@ -227,5 +256,13 @@ function showTheme(theme) {
         }
     });
 }
+
+// Auto-select the first theme on load
+window.addEventListener('DOMContentLoaded', () => {
+    const firstTab = document.querySelector('.theme-tab');
+    if (firstTab) {
+        showTheme(firstTab.dataset.theme);
+    }
+});
 </script>
 {% endblock %}
