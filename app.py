@@ -55,18 +55,20 @@ class User(UserMixin, db.Model):
 class Team(db.Model):
     __tablename__ = 'teams'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), unique=True, nullable=False)
+    # removed unique=True so duplicate names are allowed
+    name = db.Column(db.String(200), nullable=False)  
     theme = db.Column(db.String(100), nullable=False)
     leader_name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     members = db.Column(db.Text)  # Comma-separated list of member names
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
-    judge_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Link to assigned judge
-    
+    judge_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
     # Relationships
     scores = db.relationship('JudgeScore', backref='team', lazy=True)
     votes = db.relationship('Vote', backref='team', lazy=True)
     judge = db.relationship('User', foreign_keys=[judge_id], backref='assigned_teams')
+
 
 class JudgeScore(db.Model):
     __tablename__ = 'judge_scores'
